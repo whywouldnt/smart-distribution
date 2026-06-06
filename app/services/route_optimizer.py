@@ -309,6 +309,7 @@ async def _persist_results(
         # ---- Her durak için RouteStop kaydı ----
         for seq, stop in enumerate(load.stops, start=1):
             route_stop = RouteStop(
+                tenant_id=load.vehicle.tenant_id,
                 route_id=route.id,
                 order_id=stop.order_id,
                 stop_sequence=seq,
