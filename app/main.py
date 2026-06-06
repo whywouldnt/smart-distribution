@@ -7,8 +7,11 @@ from fastapi.responses import RedirectResponse
 from app.api.v1.router import api_router
 from app.core.database import Base, engine
 
-# Veritabanı tablolarını oluştur (ilk çalıştırmada)
+from init_db import init_db
+
+# Veritabanı tablolarını oluştur (ilk çalıştırmada) ve Admin hesabını seed et
 Base.metadata.create_all(bind=engine)
+init_db()
 
 app = FastAPI(
     title="Akıllı Dağıtım & Rota Optimizasyonu API",
