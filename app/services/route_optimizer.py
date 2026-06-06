@@ -30,7 +30,7 @@ from typing import List, Optional, Sequence
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.customer import Customer
 from app.models.order import Order
@@ -534,7 +534,19 @@ async def optimize_routes(
 
     await db.commit()
 
-    # 8) Özet istatistikleri hazırla
+    # 8) Re-fetch routes eagerly to prevent MissingGreenlet in API response
+    if created_routes:
+        stmt = (
+            select(Route)
+            .options(
+                joinedload(Route.route_stops).joinedload(RouteStop.order)
+            )
+            .filter(Route.id.in_([r.id for r in created_routes]))
+        )
+        result = await db.execute(stmt)
+        created_routes = list(result.unique().scalars().all())
+
+    # 9) Özet istatistikleri hazırla
     total_distance = sum(r.total_distance_km or 0.0 for r in created_routes)
     total_duration = sum(r.total_duration_min or 0 for r in created_routes)
 
