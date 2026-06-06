@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Yönetimi (Super Admin)</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; max-width: 800px; margin: 0 auto; }
+        h1 { margin-top: 0; color: #58a6ff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #30363d; }
+        th { color: #8b949e; font-weight: 600; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: #fff; }
+        .btn-green { background: #238636; }
+        .btn-red { background: #da3633; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .bg-green { background: rgba(63,185,80,0.15); color: #3fb950; }
+        .bg-red { background: rgba(248,81,73,0.15); color: #f85149; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Sistem Yönetimi</h1>
+            <button class="btn btn-red" onclick="localStorage.removeItem('token'); window.location.href='/';">Çıkış Yap</button>
+        </div>
+        <p style="color: #8b949e;">Bu panel sadece "Super Admin" içindir. Alt firmaların (tenant) sisteme erişimini (kill-switch) buradan yönetebilirsiniz.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Firma Adı</th>
+                    <th>Slug</th>
+                    <th>İletişim</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="tenantList">
+                <!-- Data injected by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const BASE = '/api/v1';
+        let token = localStorage.getItem('token');
+        
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        async function fetchTenants() {
+            try {
+                const res = await fetch(`${BASE}/admin/tenants`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        alert("Erişim reddedildi. Super Admin yetkisine sahip değilsiniz.");
+                        window.location.href = '/';
+                    }
+                    return;
+                }
+                const data = await res.json();
+                renderTenants(data);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderTenants(tenants) {
+            const tbody = document.getElementById('tenantList');
+            tbody.innerHTML = '';
+            tenants.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${t.name}</strong></td>
+                    <td>${t.slug}</td>
+                    <td>${t.contact_email || '-'}</td>
+                    <td><span class="badge ${t.is_active ? 'bg-green' : 'bg-red'}">${t.is_active ? 'Aktif' : 'Pasif (Erişim Kesildi)'}</span></td>
+                    <td>
+                        <button class="btn ${t.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleTenant(${t.id})">
+                            ${t.is_active ? 'Erişimi Kes (Kill Switch)' : 'Erişimi Aç'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function toggleTenant(id) {
+            if(!confirm("Firma erişim durumunu değiştirmek istediğinize emin misiniz?")) return;
+            
+            try {
+                const res = await fetch(`${BASE}/admin/tenants/${id}/toggle`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    fetchTenants();
+                } else {
+                    alert("Bir hata oluştu.");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        fetchTenants();
+    </script>
+</body>
+</html>

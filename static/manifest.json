@@ -1,0 +1,36 @@
+{
+  "name": "Damacana Dağıtım Sistemi",
+  "short_name": "Dağıtım",
+  "description": "Akıllı damacana su dağıtım ve rota optimizasyon sistemi",
+  "start_url": "/static/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d1117",
+  "theme_color": "#2f81f7",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Şoför Modu",
+      "short_name": "Saha",
+      "description": "Bugünkü teslimat rotana git",
+      "url": "/static/index.html#driver",
+      "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["productivity", "utilities", "navigation"]
+}
