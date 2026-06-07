@@ -4,6 +4,8 @@
    CONFIG & STATE
 ══════════════════════════════════════════════════════════ */
 const BASE = '/api/v1';
+window.onerror = function(msg, url, line) { alert("Hata: " + msg + "\nSatır: " + line); };
+
 const COLORS = ['#2f81f7','#3fb950','#f0883e','#a371f7','#ec4899','#22d3ee','#fbbf24','#f87171'];
 const VEH_TYPE = { van:'Van', truck:'Kamyon', motorcycle:'Motorsiklet', bicycle:'Bisiklet' };
 const STATUS_L = { available:'Müsait', in_use:'Seferde', maintenance:'Bakımda' };
@@ -134,7 +136,8 @@ function setFilter(f) {
     mapFilter = f;
     ['all','customers','routes'].forEach(k => {
         const id = {all:'pAll',customers:'pCus',routes:'pRou'}[k];
-        document.getElementById(id)?.classList.toggle('on', k === f);
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('on', k === f);
     });
     Object.values(custMarkers).forEach(m => f === 'routes' ? map.removeLayer(m) : (map.hasLayer(m) || m.addTo(map)));
     routeLayers.forEach(l => f === 'customers' ? map.removeLayer(l) : (map.hasLayer(l) || l.addTo(map)));
