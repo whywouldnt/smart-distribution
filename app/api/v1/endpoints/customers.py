@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_company_admin
 from app.models.tenant import User
 from app.models.customer import Customer
 from app.models.order import Order
@@ -33,7 +33,7 @@ class CustomerResponse(BaseModel):
 def create_customer(
     body: CustomerCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_admin: User = Depends(get_current_company_admin)
 ):
     # Sadece İş Kuralları ve Veri Doğrulama (Validation)
     if not (-90 <= body.lat <= 90):
@@ -51,7 +51,7 @@ def create_customer(
     try:
         return crud_customer.create_customer_with_order(
             db=db,
-            tenant_id=current_user.tenant_id,
+            tenant_id=current_admin.tenant_id,
             name=body.name,
             address=body.address,
             lat=body.lat,

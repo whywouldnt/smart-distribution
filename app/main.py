@@ -40,6 +40,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 logger = logging.getLogger("smart_distribution")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
@@ -50,6 +53,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Beklenmeyen bir sistem hatası oluştu."}
     )
+
+@app.middleware("http")
+async def csrf_protection(request: Request, call_next):
+    if request.method in ("POST", "PATCH", "PUT", "DELETE"):
+        origin = request.headers.get("origin") or request.headers.get("referer", "")
+        if origin:
+            allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+            if not any(origin.startswith(o.strip()) for o in allowed if o.strip()):
+                return JSONResponse(status_code=403, content={"detail": "CSRF doğrulama başarısız."})
+    return await call_next(request)
 
 app.include_router(api_router)
 

@@ -74,3 +74,12 @@ def get_current_active_superuser(
             status_code=status.HTTP_403_FORBIDDEN, detail="Yetersiz yetki (Super Admin gerekli)"
         )
     return current_user
+
+def get_current_company_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role not in ["super_admin", "company_admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Sadece firma yöneticileri bu işlemi yapabilir."
+        )
+    return current_user

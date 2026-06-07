@@ -119,10 +119,16 @@ def get_stats(db: Session = Depends(get_db), current_user: User = Depends(get_cu
 @router.get("/customers", response_model=List[CustomerListItem])
 def list_customers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Müşterileri bekleyen sipariş sayısıyla döndürür."""
-    customers = db.query(Customer).filter(Customer.tenant_id == current_user.tenant_id).order_by(Customer.name).all()
+    customers_with_counts = (
+        db.query(Customer, func.count(Order.id).label("pending_count"))
+        .outerjoin(Order, (Order.customer_id == Customer.id) & (Order.status == "pending"))
+        .filter(Customer.tenant_id == current_user.tenant_id)
+        .group_by(Customer.id)
+        .order_by(Customer.name)
+        .all()
+    )
     result = []
-    for c in customers:
-        pending = sum(1 for o in c.orders if o.status == "pending")
+    for c, pending in customers_with_counts:
         result.append(
             CustomerListItem(
                 id=c.id,

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_current_company_admin
 from app.models.tenant import User
 from app.schemas.optimization import (
     OptimizationResponse,
@@ -25,7 +25,7 @@ async def run_optimization(
     db: AsyncSession = Depends(get_async_db),
     origin_lat: float | None = None,
     origin_lng: float | None = None,
-    current_user: User = Depends(get_current_user)
+    current_admin: User = Depends(get_current_company_admin)
 ):
     """
     Tüm aktif araçları ve bekleyen siparişleri alarak
@@ -40,7 +40,7 @@ async def run_optimization(
     - origin_lng (float, optional): Şoförün anlık GPS boylamı
     """
     # 1) Araçları kontrol et
-    vehicles = await fetch_available_vehicles(db, current_user.tenant_id)
+    vehicles = await fetch_available_vehicles(db, current_admin.tenant_id)
     if not vehicles:
         raise HTTPException(
             status_code=400,
@@ -49,7 +49,7 @@ async def run_optimization(
         )
 
     # 2) Siparişleri kontrol et
-    orders = await fetch_pending_orders(db, current_user.tenant_id)
+    orders = await fetch_pending_orders(db, current_admin.tenant_id)
     if not orders:
         raise HTTPException(
             status_code=400,
