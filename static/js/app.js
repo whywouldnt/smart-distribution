@@ -953,7 +953,7 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
         setTimeout(() => map.invalidateSize(), 350);
-        loadDashboard();
+        if (token) loadDashboard();
         
         // Check if started in driver mode (PWA shortcut)
         if (location.hash === '#driver') {
@@ -964,7 +964,7 @@ if (document.readyState === 'loading') {
     // DOM zaten yüklendi
     initMap();
     setTimeout(() => map.invalidateSize(), 350);
-    loadDashboard();
+    if (token) loadDashboard();
     
     // Check if started in driver mode (PWA shortcut)
     if (location.hash === '#driver') {
