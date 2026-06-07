@@ -12,9 +12,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.api.v1.router import api_router
-from app.core.database import Base, engine
-
-from init_db import init_db
 
 # Veritabanı tablolarını oluştur (ilk çalıştırmada) ve Admin hesabını seed et
 # NOT: Üretim ortamında (Render vb.) "Zero-downtime deploy" sırasında race condition'ları
