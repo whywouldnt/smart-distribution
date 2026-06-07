@@ -253,7 +253,7 @@ function openSheet(tab) {
     const bs = document.getElementById('bsheet');
     bsOpen = true;
     bs.style.transform = 'translateY(0)';
-    ['mbInfo','mbRoutes','mbAdd'].forEach(id => if(document.getElementById(id)) document.getElementById(id).classList.remove('on'));
+    ['mbInfo','mbRoutes','mbAdd'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).classList.remove('on'); });
     const map = {info:'mbInfo', routes:'mbRoutes', add:'mbAdd'};
     if(document.getElementById(map[tab])) document.getElementById(map[tab]).classList.add('on');
     switchBTab(tab);
