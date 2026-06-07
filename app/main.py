@@ -30,7 +30,7 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000,https://smart-distribution.onrender.com").split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,7 +59,7 @@ async def csrf_protection(request: Request, call_next):
     if request.method in ("POST", "PATCH", "PUT", "DELETE"):
         origin = request.headers.get("origin") or request.headers.get("referer", "")
         if origin:
-            allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+            allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000,https://smart-distribution.onrender.com").split(",")
             if not any(origin.startswith(o.strip()) for o in allowed if o.strip()):
                 return JSONResponse(status_code=403, content={"detail": "CSRF doğrulama başarısız."})
     return await call_next(request)
