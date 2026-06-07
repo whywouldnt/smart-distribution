@@ -15,7 +15,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.deps import get_current_user
@@ -141,6 +141,7 @@ def list_pending_orders(db: Session = Depends(get_db), current_user: User = Depe
     """Bekleyen siparişleri müşteri adıyla döndürür."""
     orders = (
         db.query(Order)
+        .options(joinedload(Order.customer))
         .filter(Order.tenant_id == current_user.tenant_id)
         .filter(Order.status == "pending")
         .order_by(Order.priority.desc(), Order.id)
