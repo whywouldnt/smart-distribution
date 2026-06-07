@@ -193,7 +193,7 @@ function nav(lat, lng) {
 /* ══════════════════════════════════════════════════════════
    TOAST
 ══════════════════════════════════════════════════════════ */
-let _tt;
+
 function toast(msg, ok=true) {
     const el = document.getElementById('toast');
     document.getElementById('tmsg').textContent = msg;
