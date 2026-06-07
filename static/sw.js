@@ -13,7 +13,7 @@
  *   CACHE_VERSION değiştirildiğinde eski önbellek silinir.
  */
 
-const CACHE_VERSION = 'sd-v3';
+const CACHE_VERSION = 'sd-v4';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
@@ -84,14 +84,12 @@ self.addEventListener('fetch', event => {
           // İnternet yoksa isteği yakala ve çökmesini engelle
           console.warn('Offline mod: İstek kuyruğa alınıyor...', request.url);
           
-          // Gelişmiş senaryoda burada IndexedDB'ye kayıt yapılır (Background Sync)
           return new Response(
             JSON.stringify({ 
-              detail: 'Çevrimdışısınız. İşleminiz cihaz hafızasına alındı, internet bağlantısı sağlandığında senkronize edilecektir.',
-              status: 'queued'
+              detail: 'İnternet bağlantısı gerekli. Bağlandıktan sonra tekrar deneyin.'
             }), 
             { 
-              status: 202, // 202 Accepted
+              status: 503,
               headers: { 'Content-Type': 'application/json' } 
             }
           );
