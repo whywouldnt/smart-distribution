@@ -1,4 +1,5 @@
 from typing import Annotated
+from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -39,8 +40,21 @@ def get_current_user(
         if tenant is None or not tenant.is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Aboneliğiniz sona ermiştir veya firmanız pasife alınmıştır.",
+                detail="Firmanız pasife alınmıştır.",
             )
+        
+        # Check if subscription has expired
+        if tenant.subscription_ends_at:
+            # Handle naive or aware datetimes
+            now = datetime.now(timezone.utc)
+            if tenant.subscription_ends_at.tzinfo is None:
+                now = now.replace(tzinfo=None)
+            
+            if tenant.subscription_ends_at < now:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Aboneliğiniz sona ermiştir. Lütfen yönetici ile iletişime geçin.",
+                )
 
     return user
 

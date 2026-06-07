@@ -9,9 +9,10 @@ import bcrypt
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
+    import secrets
     import warnings
-    warnings.warn("KRİTİK GÜVENLİK UYARISI: SECRET_KEY ortam değişkeni bulunamadı. Varsayılan güvensiz anahtar kullanılıyor!")
-    SECRET_KEY = "super-secret-key-for-smart-distribution-dev"
+    warnings.warn("KRİTİK GÜVENLİK UYARISI: SECRET_KEY ortam değişkeni bulunamadı. Rastgele güvenli anahtar üretiliyor (Yeniden başlatmalarda oturumlar düşer)!")
+    SECRET_KEY = secrets.token_urlsafe(32)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 # 1 hour for much better security compared to 7 days

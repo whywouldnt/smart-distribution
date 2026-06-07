@@ -906,12 +906,36 @@ async function skipStop() {
     if (!confirm('Bu durağı atlamak istediğinizden emin misiniz?')) return;
     const stop = (dmRoute ? dmRoute.stops[dmStopIdx] : null);
     if (!stop) return;
-    // Mark as skipped locally
-    dmRoute.stops[dmStopIdx].status = 'skipped';
-    dmStopIdx = dmRoute.stops.findIndex((s,i) => i > dmStopIdx && s.status === 'pending');
-    if (dmStopIdx < 0) dmStopIdx = dmRoute.stops.length;
-    dmReturns = 0;
-    renderDriverStop();
+    
+    try {
+        const res = await authFetch(`${BASE}/delivery/routes/${dmRoute.route_id}/stops/${stop.stop_sequence}/skip`, {
+            method: 'PATCH'
+        });
+        if (!res.ok) throw new Error("Atlama işlemi kaydedilemedi");
+        
+        const data = await res.json();
+        dmRoute.stops[dmStopIdx].status = 'skipped';
+        
+        if (data.route_complete) {
+            dmStopIdx = dmRoute.stops.length;
+            renderDriverStop();
+            toast('🎉 Rota tamamlandı!', true);
+            return;
+        }
+
+        if (data.next_stop) {
+            dmStopIdx = dmRoute.stops.findIndex(s => s.stop_sequence === data.next_stop.stop_sequence);
+        } else {
+            dmStopIdx = dmRoute.stops.findIndex((s,i) => i > dmStopIdx && s.status === 'pending');
+        }
+        if (dmStopIdx < 0) dmStopIdx = dmRoute.stops.length;
+        
+        dmReturns = 0;
+        renderDriverStop();
+        toast('Durak atlandı.', true);
+    } catch(e) {
+        toast('Hata: ' + e.message, false);
+    }
 }
 
 /* ══════════════════════════════════════════════════════════

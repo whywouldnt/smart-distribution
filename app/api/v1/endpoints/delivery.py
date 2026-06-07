@@ -168,13 +168,63 @@ def complete_stop(
             raise HTTPException(status_code=500, detail="Teslim kaydedilirken veritabanı hatası oluştu.")
 
     # Sonraki durağı belirle
-    remaining = [rs for rs in sorted_stops if rs.stop_sequence > stop_sequence and rs.status != "completed"]
+    remaining = [rs for rs in sorted_stops if rs.stop_sequence > stop_sequence and rs.status not in ("completed", "skipped")]
     next_detail = _build_stop_detail(min(remaining, key=lambda rs: rs.stop_sequence)) if remaining else None
 
     completed_count = sum(1 for rs in sorted_stops if rs.status == "completed")
-    route_complete = completed_count == len(sorted_stops)
+    processed_count = sum(1 for rs in sorted_stops if rs.status in ("completed", "skipped"))
+    route_complete = processed_count == len(sorted_stops)
 
     # Rota tamamen bittiyse güncelle (CRUD Katmanına Sevk)
+    if route_complete and route.status != "completed":
+        try:
+            crud_delivery.mark_route_completed(db, route)
+        except Exception:
+            db.rollback()
+
+    return CompleteStopResponse(
+        completed_sequence=stop_sequence,
+        next_stop=next_detail,
+        route_complete=route_complete,
+        completed_stops=completed_count,
+        total_stops=len(sorted_stops),
+    )
+
+@router.patch("/routes/{route_id}/stops/{stop_sequence}/skip", response_model=CompleteStopResponse)
+def skip_stop(
+    route_id: int,
+    stop_sequence: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    route = crud_delivery.get_route_with_stops(db, current_user.tenant_id, route_id)
+    if not route:
+        raise HTTPException(status_code=404, detail=f"Rota bulunamadı: id={route_id}")
+
+    sorted_stops = sorted(route.route_stops, key=lambda rs: rs.stop_sequence)
+    
+    target_stop = next((rs for rs in sorted_stops if rs.stop_sequence == stop_sequence), None)
+    if not target_stop:
+        raise HTTPException(status_code=404, detail="Durak bulunamadı.")
+
+    # İdempotency (Veritabanı Katmanına Sevk)
+    if target_stop.status not in ("completed", "skipped"):
+        try:
+            target_stop.status = "skipped"
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Atlama kaydedilirken hata oluştu.")
+
+    # Sonraki durağı belirle
+    remaining = [rs for rs in sorted_stops if rs.stop_sequence > stop_sequence and rs.status not in ("completed", "skipped")]
+    next_detail = _build_stop_detail(min(remaining, key=lambda rs: rs.stop_sequence)) if remaining else None
+
+    completed_count = sum(1 for rs in sorted_stops if rs.status == "completed")
+    processed_count = sum(1 for rs in sorted_stops if rs.status in ("completed", "skipped"))
+    route_complete = processed_count == len(sorted_stops)
+
+    # Rota tamamen bittiyse güncelle
     if route_complete and route.status != "completed":
         try:
             crud_delivery.mark_route_completed(db, route)

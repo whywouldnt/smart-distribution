@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Literal
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ class UserCreate(BaseModel):
     email: str
     password: str
     full_name: str | None = None
-    role: str = "company_admin"
+    role: Literal["company_admin", "driver"] = "company_admin"
 
 @router.get("/tenants", response_model=List[TenantResponse])
 def get_tenants(
