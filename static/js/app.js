@@ -221,9 +221,9 @@ function openSheet(tab) {
     const bs = document.getElementById('bsheet');
     bsOpen = true;
     bs.style.transform = 'translateY(0)';
-    ['mbInfo','mbRoutes','mbAdd'].forEach(id => document.getElementById(id)?.classList.remove('on'));
+    ['mbInfo','mbRoutes','mbAdd'].forEach(id => if(document.getElementById(id)) document.getElementById(id).classList.remove('on'));
     const map = {info:'mbInfo', routes:'mbRoutes', add:'mbAdd'};
-    document.getElementById(map[tab])?.classList.add('on');
+    if(document.getElementById(map[tab])) document.getElementById(map[tab]).classList.add('on');
     switchBTab(tab);
 }
 
@@ -322,7 +322,7 @@ function renderCustomerList(container, list) {
             <div class="lbody"><div class="ltitle">${esc(c.name)}</div><div class="lsub">${esc(c.address)}</div></div>
             ${c.pending_orders ? `<span class="badge bg-y">${esc(String(c.pending_orders))}</span>` : ''}
         `;
-        el.onclick = () => { map.setView([c.lat,c.lng],16); custMarkers[c.id]?.openPopup(); if (bsOpen) closeSheet(); };
+        el.onclick = () => { map.setView([c.lat,c.lng],16); if(custMarkers[c.id]) custMarkers[c.id].openPopup(); if (bsOpen) closeSheet(); };
         container.appendChild(el);
     });
 }
@@ -461,10 +461,10 @@ function renderAddSheet(body) {
 }
 
 async function saveMobileCust() {
-    const name = document.getElementById('bcName')?.value.trim();
-    const address = document.getElementById('bcAddr')?.value.trim();
-    const lat = parseFloat(document.getElementById('bcLat')?.value);
-    const lng = parseFloat(document.getElementById('bcLng')?.value);
+    const name = (document.getElementById('bcName') ? document.getElementById('bcName').value.trim() : '');
+    const address = (document.getElementById('bcAddr') ? document.getElementById('bcAddr').value.trim() : '');
+    const lat = parseFloat(document.getElementById('bcLat') ? document.getElementById('bcLat').value : 0);
+    const lng = parseFloat(document.getElementById('bcLng') ? document.getElementById('bcLng').value : 0);
     if (!name||!address||isNaN(lat)||isNaN(lng)) { toast('Tüm alanları doldurun.', false); return; }
     try {
         const r = await authFetch(`${BASE}/customers`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,address,lat,lng})});
@@ -473,10 +473,10 @@ async function saveMobileCust() {
     } catch(e) { toast('Bağlantı hatası',false); }
 }
 async function saveMobileVeh() {
-    const plate=document.getElementById('bvPlate')?.value.trim();
-    const cap=document.getElementById('bvCap')?.value;
-    const type=document.getElementById('bvType')?.value;
-    const driver=document.getElementById('bvDriver')?.value.trim()||null;
+    const plate=(document.getElementById('bvPlate') ? document.getElementById('bvPlate').value.trim() : '');
+    const cap=(document.getElementById('bvCap') ? document.getElementById('bvCap').value : '');
+    const type=(document.getElementById('bvType') ? document.getElementById('bvType').value : '');
+    const driver=(document.getElementById('bvDriver') ? document.getElementById('bvDriver').value.trim() : '')||null;
     if (!plate||!cap) { toast('Plaka ve kapasite zorunlu.',false); return; }
     try {
         const r=await authFetch(`${BASE}/vehicles`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plate,capacity_kg:parseFloat(cap)*19,type,status:'available',volume_m3:parseFloat(cap)*0.025})});
@@ -561,7 +561,7 @@ function renderRoutes(data) {
     const rpc = document.getElementById('rpc');
     rpc.innerHTML = '';
 
-    if (!data.routes?.length) {
+    if (!(data.routes && data.routes.length)) {
         rpc.innerHTML = `<div class="empty"><div class="ei">🤔</div><div class="et">Rota oluşturulamadı</div></div>`;
         return;
     }
@@ -739,11 +739,11 @@ function renderDriverStop() {
             <div class="dm-done-screen">
                 <div class="dm-done-icon">🎉</div>
                 <div class="dm-done-title">Tüm Teslimatlar Tamamlandı!</div>
-                <div class="dm-done-sub">Bugünkü ${esc(String(dmRoute?.total_stops||0))} abonenin teslimatı başarıyla gerçekleştirildi.<br>Harika iş çıkardınız!</div>
+                <div class="dm-done-sub">Bugünkü ${esc(String((dmRoute ? dmRoute.total_stops : 0)))} abonenin teslimatı başarıyla gerçekleştirildi.<br>Harika iş çıkardınız!</div>
                 <button class="btn btn-p" style="margin-top:16px;min-height:56px;width:100%;max-width:300px;font-size:16px" onclick="exitDriverMode()">Ana Ekrana Dön</button>
             </div>
         `;
-        updateProgress(dmRoute?.total_stops||0, dmRoute?.total_stops||0);
+        updateProgress((dmRoute ? dmRoute.total_stops : 0), (dmRoute ? dmRoute.total_stops : 0));
         return;
     }
 
@@ -820,7 +820,7 @@ function changeReturns(delta) {
 }
 
 async function completeStop() {
-    const stop = dmRoute?.stops[dmStopIdx];
+    const stop = (dmRoute ? dmRoute.stops[dmStopIdx] : null);
     if (!stop) return;
 
     const btn = document.getElementById('dmDoneBtn');
@@ -866,7 +866,7 @@ async function completeStop() {
 
 async function skipStop() {
     if (!confirm('Bu durağı atlamak istediğinizden emin misiniz?')) return;
-    const stop = dmRoute?.stops[dmStopIdx];
+    const stop = (dmRoute ? dmRoute.stops[dmStopIdx] : null);
     if (!stop) return;
     // Mark as skipped locally
     dmRoute.stops[dmStopIdx].status = 'skipped';
