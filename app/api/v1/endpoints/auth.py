@@ -1,5 +1,9 @@
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -11,8 +15,9 @@ from app.models.tenant import User
 router = APIRouter()
 
 @router.post("/login")
+@limiter.limit("5/minute")
 def login_access_token(
-    db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    request: Request, response: Response, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
     """OAuth2 compatible token login, get an access token for future requests"""
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -22,9 +27,19 @@ def login_access_token(
         raise HTTPException(status_code=400, detail="Pasif kullanıcı")
     
     access_token = create_access_token(user.id)
+    
+    # Güvenli httpOnly Cookie ayarlama (XSS Koruması)
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=3600 # 1 saat
+    )
+    
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
+        "message": "Giriş başarılı",
         "role": user.role,
         "tenant_id": user.tenant_id
     }

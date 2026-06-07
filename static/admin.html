@@ -110,13 +110,13 @@
 
     <script>
         const BASE = '/api/v1';
-        let token = localStorage.getItem('token');
-        if (!token) { window.location.href = '/'; }
+        let isLoggedIn = localStorage.getItem('logged_in') === 'true';
+        if (!isLoggedIn) { window.location.href = '/'; }
 
         // Bayileri Çek
         async function fetchTenants() {
             try {
-                const res = await fetch(`${BASE}/admin/tenants`, { headers: { 'Authorization': `Bearer ${token}` }});
+                const res = await fetch(`${BASE}/admin/tenants`, { credentials: 'include' });
                 if (!res.ok) {
                     if (res.status === 403) { alert("Erişim reddedildi. Süper Admin değilsiniz!"); window.location.href = '/'; }
                     return;
@@ -159,7 +159,7 @@
             };
             const res = await fetch(`${BASE}/admin/tenants`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
@@ -177,7 +177,7 @@
         // Fiş Çekme
         async function toggleTenant(id) {
             if(!confirm("Bu firmanın erişim durumunu değiştirmek istediğinize emin misiniz?")) return;
-            await fetch(`${BASE}/admin/tenants/${id}/toggle`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` }});
+            await fetch(`${BASE}/admin/tenants/${id}/toggle`, { method: 'PATCH', credentials: 'include' });
             fetchTenants();
         }
 
@@ -199,7 +199,7 @@
             };
             const res = await fetch(`${BASE}/admin/tenants/${tId}/users`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                credentials: 'include', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             if (res.ok) {
@@ -213,7 +213,7 @@
             }
         }
 
-        function logout() { localStorage.removeItem('token'); window.location.href='/'; }
+        function logout() { localStorage.removeItem('logged_in'); window.location.href='/'; }
         
         fetchTenants();
     </script>

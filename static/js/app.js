@@ -41,18 +41,18 @@ function esc(v) {
                     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-let token = localStorage.getItem('token');
+let isLoggedIn = localStorage.getItem('logged_in') === 'true';
+let token = isLoggedIn ? "cookie_active" : null;
 
 async function authFetch(url, options = {}) {
     if (!options.headers) options.headers = {};
-    if (token) options.headers['Authorization'] = `Bearer ${token}`;
+    options.credentials = 'include'; // Güvenli httpOnly cookie gönderir
     
     const res = await fetch(url, options);
     if (res.status === 401) {
-        // Unauthorized, show login
         document.getElementById('loginOverlay').style.display = 'flex';
         token = null;
-        localStorage.removeItem('token');
+        localStorage.removeItem('logged_in');
         throw new Error("Unauthorized");
     }
     return res;
@@ -85,10 +85,9 @@ async function doLogin() {
         }
         
         const data = await r.json();
-        if (!data.access_token) throw new Error('API yanıtında token bulunamadı');
         
-        token = data.access_token;
-        localStorage.setItem('token', token);
+        token = "cookie_active";
+        localStorage.setItem('logged_in', 'true');
         console.log('[doLogin] Login successful');
         
         document.getElementById('loginOverlay').style.display = 'none';
@@ -106,7 +105,7 @@ async function doLogin() {
 
 function doLogout() {
     token = null;
-    localStorage.removeItem('token');
+    localStorage.removeItem('logged_in');
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('logPass').value = '';
 }
