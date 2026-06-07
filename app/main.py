@@ -17,8 +17,9 @@ from app.core.database import Base, engine
 from init_db import init_db
 
 # Veritabanı tablolarını oluştur (ilk çalıştırmada) ve Admin hesabını seed et
-Base.metadata.create_all(bind=engine)
-init_db()
+# NOT: Üretim ortamında (Render vb.) "Zero-downtime deploy" sırasında race condition'ları
+# önlemek için `init_db()` ve `Base.metadata.create_all()` buraya eklenmemelidir.
+# Bunun yerine veritabanı migrasyonları Alembic gibi araçlarla deploy adımında bir kez çalıştırılmalıdır.
 
 app = FastAPI(
     title="Akıllı Dağıtım & Rota Optimizasyonu API",

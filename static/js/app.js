@@ -253,8 +253,8 @@ function openSheet(tab) {
     bsOpen = true;
     bs.style.transform = 'translateY(0)';
     ['mbInfo','mbRoutes','mbAdd'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).classList.remove('on'); });
-    const map = {info:'mbInfo', routes:'mbRoutes', add:'mbAdd'};
-    if(document.getElementById(map[tab])) document.getElementById(map[tab]).classList.add('on');
+    const tabIdMap = {info:'mbInfo', routes:'mbRoutes', add:'mbAdd'};
+    if(document.getElementById(tabIdMap[tab])) document.getElementById(tabIdMap[tab]).classList.add('on');
     switchBTab(tab);
 }
 
@@ -454,8 +454,11 @@ function renderInfoSheet(body) {
 }
 
 function renderRoutesSheet(body) {
-    const rpc = document.getElementById('rpc').innerHTML;
-    body.innerHTML = `<div id="bsRoutes">${rpc}</div>`;
+    body.innerHTML = '';
+    const bsRoutes = document.createElement('div');
+    bsRoutes.id = 'bsRoutes';
+    bsRoutes.innerHTML = document.getElementById('rpc').innerHTML;
+    body.appendChild(bsRoutes);
 }
 
 function renderAddSheet(body) {
@@ -893,7 +896,7 @@ async function completeStop() {
             dmReturns = 0;
         }
 
-        loadDashboard(); // Refresh KPIs
+        loadStats(); // Refresh KPIs
         renderDriverStop();
     } catch(e) {
         toast('Bağlantı hatası: '+e.message, false);
