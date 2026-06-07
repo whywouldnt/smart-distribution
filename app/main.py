@@ -2,7 +2,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
+from app.core.deps import get_current_user, get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
 from fastapi import Request
 import logging
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -54,6 +57,21 @@ app.include_router(api_router)
 
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
+
+
+@app.get("/admin-panel")
+def admin_panel(request: Request, db: Session = Depends(get_db)):
+    cookie_token = request.cookies.get("access_token")
+    if not cookie_token:
+        return RedirectResponse(url="/")
+    try:
+        token = cookie_token.split(" ")[1] if cookie_token.startswith("Bearer ") else cookie_token
+        user = get_current_user(request, db, token)
+        if user.role != "super_admin":
+            return RedirectResponse(url="/")
+        return FileResponse("protected/admin.html")
+    except Exception:
+        return RedirectResponse(url="/")
 
 @app.get("/")
 def root():
