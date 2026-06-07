@@ -10,17 +10,15 @@ from app.models.tenant import User
 from app.models.customer import Customer
 from app.models.order import Order
 
+from app.crud import crud_customer
+
 router = APIRouter(prefix="/customers", tags=["customers"])
-
-BOTTLE_WEIGHT_KG = 19
-
 
 class CustomerCreate(BaseModel):
     name: str
     address: str
     lat: float
     lng: float
-
 
 class CustomerResponse(BaseModel):
     id: int
@@ -31,13 +29,13 @@ class CustomerResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
 @router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
 def create_customer(
     body: CustomerCreate, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Sadece İş Kuralları ve Veri Doğrulama (Validation)
     if not (-90 <= body.lat <= 90):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -49,39 +47,18 @@ def create_customer(
             detail="Boylam (lng) -180 ile 180 arasında olmalıdır.",
         )
 
+    # Veritabanı ve İş Mantığı (Business Logic) ayrıştırıldı!
     try:
-        customer = Customer(
+        return crud_customer.create_customer_with_order(
+            db=db,
             tenant_id=current_user.tenant_id,
             name=body.name,
             address=body.address,
             lat=body.lat,
-            lng=body.lng,
+            lng=body.lng
         )
-        db.add(customer)
-        db.flush()  # customer.id'yi Order'dan önce al
-
-        bottle_count = random.randint(1, 3)
-        empty_returns = random.randint(0, bottle_count)
-        order = Order(
-            tenant_id=current_user.tenant_id,
-            customer_id=customer.id,
-            status="pending",
-            bottle_count=bottle_count,
-            empty_returns_expected=empty_returns,
-            weight_kg=round(bottle_count * BOTTLE_WEIGHT_KG, 1),
-            volume_m3=round(bottle_count * 0.025, 3),
-            delivery_lat=body.lat,
-            delivery_lng=body.lng,
-            delivery_address=body.address,
-        )
-        db.add(order)
-        db.commit()
     except Exception:
-        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Müşteri kaydedilirken veritabanı hatası oluştu.",
         )
-
-    db.refresh(customer)
-    return customer

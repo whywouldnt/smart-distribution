@@ -3,73 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Yönetimi (Super Admin)</title>
+    <title>Süper Patron Paneli | Damacana SaaS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: system-ui, sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }
-        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; max-width: 800px; margin: 0 auto; }
-        h1 { margin-top: 0; color: #58a6ff; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #30363d; }
+        :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --accent: #2f81f7; --red: #f85149; --green: #3fb950; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+        h1 { color: #fff; font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; color: #fff; }
+        .btn-p { background: var(--accent); } .btn-p:hover { filter: brightness(1.2); }
+        .btn-r { background: var(--red); } .btn-r:hover { filter: brightness(1.2); }
+        .btn-g { background: var(--green); }
+        .grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
         th { color: #8b949e; font-weight: 600; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: #fff; }
-        .btn-green { background: #238636; }
-        .btn-red { background: #da3633; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-        .bg-green { background: rgba(63,185,80,0.15); color: #3fb950; }
-        .bg-red { background: rgba(248,81,73,0.15); color: #f85149; }
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+        .bg-g { background: rgba(63,185,80,0.15); color: var(--green); }
+        .bg-r { background: rgba(248,81,73,0.15); color: var(--red); }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-size: 12px; color: #8b949e; margin-bottom: 6px; font-weight: 600; }
+        input { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: #fff; outline: none; transition: 0.2s; }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47,129,247,0.15); }
+        
+        /* Modal */
+        #modal { display: none; position: fixed; inset: 0; background: rgba(13,17,23,0.85); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--surface); padding: 24px; border-radius: 12px; width: 350px; border: 1px solid var(--border); box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+        
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>Sistem Yönetimi</h1>
-            <button class="btn btn-red" onclick="localStorage.removeItem('token'); window.location.href='/';">Çıkış Yap</button>
+    <div class="header">
+        <h1>👑 Süper Patron Paneli <span style="font-size: 14px; color: #8b949e; font-weight:normal;">SaaS Bayi Yönetimi</span></h1>
+        <button class="btn btn-r" onclick="logout()">Çıkış Yap</button>
+    </div>
+
+    <div class="grid">
+        <!-- Sol Taraf: Kiracı Tablosu -->
+        <div class="card" style="overflow-x: auto;">
+            <h2 style="font-size: 18px; margin-bottom: 8px;">🏢 Kayıtlı Bayiler (Tenants)</h2>
+            <p style="color:#8b949e; font-size:13px;">Sisteminize abone olan bayileri buradan izleyin, fişini çekin veya onlara admin hesabı açın.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Firma Adı</th>
+                        <th>Kısa Kod (Slug)</th>
+                        <th>İletişim</th>
+                        <th>Durum</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="tenantList">
+                    <tr><td colspan="5" style="text-align:center;">Yükleniyor...</td></tr>
+                </tbody>
+            </table>
         </div>
-        <p style="color: #8b949e;">Bu panel sadece "Super Admin" içindir. Alt firmaların (tenant) sisteme erişimini (kill-switch) buradan yönetebilirsiniz.</p>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Firma Adı</th>
-                    <th>Slug</th>
-                    <th>İletişim</th>
-                    <th>Durum</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-            <tbody id="tenantList">
-                <!-- Data injected by JS -->
-            </tbody>
-        </table>
+
+        <!-- Sağ Taraf: Yeni Kiracı Ekleme Formu -->
+        <div class="card">
+            <h2 style="font-size: 18px; margin-bottom: 16px;">✨ Yeni Bayi Ekle</h2>
+            <div class="form-group">
+                <label>Firma Adı *</label>
+                <input type="text" id="tName" placeholder="Örn: Özsu Dağıtım">
+            </div>
+            <div class="form-group">
+                <label>Kısa Kod (Boşluksuz) *</label>
+                <input type="text" id="tSlug" placeholder="Örn: ozsu">
+            </div>
+            <div class="form-group">
+                <label>İletişim E-Posta</label>
+                <input type="email" id="tEmail" placeholder="iletisim@ozsu.com">
+            </div>
+            <button class="btn btn-p" style="width: 100%; margin-top: 8px;" onclick="createTenant()">Bayiyi Sisteme Kaydet</button>
+        </div>
+    </div>
+
+    <!-- Kullanıcı Ekleme Modalı -->
+    <div id="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom: 6px;">👤 Patron Hesabı Aç</h3>
+            <p style="font-size: 12px; color:#8b949e; margin-bottom: 18px;">Bayinin sisteme kendi girebilmesi için bir şifre tanımlayın.</p>
+            <input type="hidden" id="modalTenantId">
+            <div class="form-group">
+                <label>E-Posta *</label>
+                <input type="email" id="uEmail" placeholder="patron@ozsu.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre *</label>
+                <input type="text" id="uPass" placeholder="GizliSifre123">
+            </div>
+            <div class="form-group">
+                <label>Ad Soyad</label>
+                <input type="text" id="uName" placeholder="Ahmet Yılmaz">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 24px;">
+                <button class="btn" style="flex:1; background:var(--border);" onclick="closeModal()">İptal</button>
+                <button class="btn btn-p" style="flex:1;" onclick="createUser()">Hesabı Aç</button>
+            </div>
+        </div>
     </div>
 
     <script>
         const BASE = '/api/v1';
         let token = localStorage.getItem('token');
-        
-        if (!token) {
-            window.location.href = '/';
-        }
+        if (!token) { window.location.href = '/'; }
 
+        // Bayileri Çek
         async function fetchTenants() {
             try {
-                const res = await fetch(`${BASE}/admin/tenants`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await fetch(`${BASE}/admin/tenants`, { headers: { 'Authorization': `Bearer ${token}` }});
                 if (!res.ok) {
-                    if (res.status === 403) {
-                        alert("Erişim reddedildi. Super Admin yetkisine sahip değilsiniz.");
-                        window.location.href = '/';
-                    }
+                    if (res.status === 403) { alert("Erişim reddedildi. Süper Admin değilsiniz!"); window.location.href = '/'; }
                     return;
                 }
                 const data = await res.json();
                 renderTenants(data);
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
+        // Tabloyu Çiz
         function renderTenants(tenants) {
             const tbody = document.getElementById('tenantList');
             tbody.innerHTML = '';
@@ -77,12 +134,15 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${t.name}</strong></td>
-                    <td>${t.slug}</td>
+                    <td style="color:var(--accent)">${t.slug}</td>
                     <td>${t.contact_email || '-'}</td>
-                    <td><span class="badge ${t.is_active ? 'bg-green' : 'bg-red'}">${t.is_active ? 'Aktif' : 'Pasif (Erişim Kesildi)'}</span></td>
-                    <td>
-                        <button class="btn ${t.is_active ? 'btn-red' : 'btn-green'}" onclick="toggleTenant(${t.id})">
-                            ${t.is_active ? 'Erişimi Kes (Kill Switch)' : 'Erişimi Aç'}
+                    <td><span class="badge ${t.is_active ? 'bg-g' : 'bg-r'}">${t.is_active ? 'Aktif' : 'Fişi Çekildi'}</span></td>
+                    <td style="display:flex; gap:8px;">
+                        <button class="btn ${t.is_active ? 'btn-r' : 'btn-g'}" style="padding: 6px 12px; font-size:12px;" onclick="toggleTenant(${t.id})">
+                            ${t.is_active ? 'Fişi Çek' : 'Aktif Et'}
+                        </button>
+                        <button class="btn btn-p" style="padding: 6px 12px; font-size:12px;" onclick="openModal(${t.id})">
+                            + Hesap Aç
                         </button>
                     </td>
                 `;
@@ -90,24 +150,71 @@
             });
         }
 
-        async function toggleTenant(id) {
-            if(!confirm("Firma erişim durumunu değiştirmek istediğinize emin misiniz?")) return;
-            
-            try {
-                const res = await fetch(`${BASE}/admin/tenants/${id}/toggle`, {
-                    method: 'PATCH',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    fetchTenants();
-                } else {
-                    alert("Bir hata oluştu.");
-                }
-            } catch (e) {
-                console.error(e);
+        // Bayi Oluştur
+        async function createTenant() {
+            const payload = {
+                name: document.getElementById('tName').value,
+                slug: document.getElementById('tSlug').value,
+                contact_email: document.getElementById('tEmail').value
+            };
+            const res = await fetch(`${BASE}/admin/tenants`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("Bayi başarıyla sisteme eklendi!");
+                document.getElementById('tName').value = '';
+                document.getElementById('tSlug').value = '';
+                document.getElementById('tEmail').value = '';
+                fetchTenants();
+            } else {
+                const err = await res.json();
+                alert("Hata: " + (err.detail || 'Bilinmeyen hata'));
             }
         }
 
+        // Fiş Çekme
+        async function toggleTenant(id) {
+            if(!confirm("Bu firmanın erişim durumunu değiştirmek istediğinize emin misiniz?")) return;
+            await fetch(`${BASE}/admin/tenants/${id}/toggle`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` }});
+            fetchTenants();
+        }
+
+        // Modal Yönetimi
+        function openModal(tenantId) {
+            document.getElementById('modalTenantId').value = tenantId;
+            document.getElementById('modal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        // Bayi Patronu Hesabı Açma
+        async function createUser() {
+            const tId = document.getElementById('modalTenantId').value;
+            const payload = {
+                email: document.getElementById('uEmail').value,
+                password: document.getElementById('uPass').value,
+                full_name: document.getElementById('uName').value,
+                role: "company_admin"
+            };
+            const res = await fetch(`${BASE}/admin/tenants/${tId}/users`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                alert("Şirket yöneticisi başarıyla eklendi! Şifresini kendisine iletebilirsiniz.");
+                closeModal();
+                document.getElementById('uEmail').value = '';
+                document.getElementById('uPass').value = '';
+            } else {
+                const err = await res.json();
+                alert("Hata: " + (err.detail || 'Bilinmeyen hata'));
+            }
+        }
+
+        function logout() { localStorage.removeItem('token'); window.location.href='/'; }
+        
         fetchTenants();
     </script>
 </body>

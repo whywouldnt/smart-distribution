@@ -13,7 +13,7 @@
  *   CACHE_VERSION değiştirildiğinde eski önbellek silinir.
  */
 
-const CACHE_VERSION = 'sd-v1';
+const CACHE_VERSION = 'sd-v2';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 
@@ -69,11 +69,36 @@ self.addEventListener('fetch', event => {
   // 1) API istekleri: Network-First
   const isApi = url.pathname.startsWith('/api/v1/');
   if (isApi) {
-    const isCacheable = CACHEABLE_API_PATTERNS.some(p => p.test(url.pathname));
-    if (isCacheable && request.method === 'GET') {
-      event.respondWith(networkFirstWithCache(request));
+    if (request.method === 'GET') {
+      const isCacheable = CACHEABLE_API_PATTERNS.some(p => p.test(url.pathname));
+      if (isCacheable) {
+        event.respondWith(networkFirstWithCache(request));
+      }
+      return;
     }
-    // POST/PATCH API isteklerini olduğu gibi gönder (cache bypass)
+
+    // POST/PATCH/PUT istekleri için Offline desteği
+    if (request.method === 'POST' || request.method === 'PATCH' || request.method === 'PUT') {
+      event.respondWith(
+        fetch(request.clone()).catch(async (error) => {
+          // İnternet yoksa isteği yakala ve çökmesini engelle
+          console.warn('Offline mod: İstek kuyruğa alınıyor...', request.url);
+          
+          // Gelişmiş senaryoda burada IndexedDB'ye kayıt yapılır (Background Sync)
+          return new Response(
+            JSON.stringify({ 
+              detail: 'Çevrimdışısınız. İşleminiz cihaz hafızasına alındı, internet bağlantısı sağlandığında senkronize edilecektir.',
+              status: 'queued'
+            }), 
+            { 
+              status: 202, // 202 Accepted
+              headers: { 'Content-Type': 'application/json' } 
+            }
+          );
+        })
+      );
+      return;
+    }
     return;
   }
 

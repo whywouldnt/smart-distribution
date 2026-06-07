@@ -1,0 +1,7 @@
+function toast(msg, ok=true) {
+    const el = document.getElementById('toast');
+    document.getElementById('tmsg').textContent = msg;
+    el.className = ok ? 'vis tok' : 'vis terr';
+    clearTimeout(_tt);
+    _tt = setTimeout(() => el.classList.remove('vis'), 3500);
+}
