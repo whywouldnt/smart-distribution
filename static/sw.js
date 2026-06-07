@@ -13,7 +13,7 @@
  *   CACHE_VERSION değiştirildiğinde eski önbellek silinir.
  */
 
-const CACHE_VERSION = 'sd-v2';
+const CACHE_VERSION = 'sd-v3';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_CACHE     = `${CACHE_VERSION}-api`;
 

@@ -4,7 +4,18 @@
    CONFIG & STATE
 ══════════════════════════════════════════════════════════ */
 const BASE = '/api/v1';
-window.onerror = function(msg, url, line) { alert("Hata: " + msg + "\nSatır: " + line); };
+
+// Global error handler
+window.onerror = function(msg, url, line, col, err) {
+    console.error(`[Global Error] ${msg} at ${url}:${line}:${col}`, err);
+    toast(`❌ Hata: ${msg.substring(0, 80)}`, false);
+    return false;
+};
+
+window.addEventListener('unhandledrejection', event => {
+    console.error('[Unhandled Promise Rejection]', event.reason);
+    toast(`❌ Hata: ${String(event.reason).substring(0, 80)}`, false);
+});
 
 const COLORS = ['#2f81f7','#3fb950','#f0883e','#a371f7','#ec4899','#22d3ee','#fbbf24','#f87171'];
 const VEH_TYPE = { van:'Van', truck:'Kamyon', motorcycle:'Motorsiklet', bicycle:'Bisiklet' };
@@ -63,11 +74,22 @@ async function doLogin() {
             body: formData
         });
         
-        if (!r.ok) throw new Error('E-posta veya şifre hatalı');
+        if (!r.ok) {
+            console.warn('[doLogin] Login failed with status:', r.status);
+            let errMsg = 'Giriş başarısız. Lütfen e-posta ve şifrenizi kontrol edin.';
+            try {
+                const errData = await r.json();
+                if (errData.detail) errMsg = errData.detail;
+            } catch(_) {}
+            throw new Error(errMsg);
+        }
         
         const data = await r.json();
+        if (!data.access_token) throw new Error('API yanıtında token bulunamadı');
+        
         token = data.access_token;
         localStorage.setItem('token', token);
+        console.log('[doLogin] Login successful');
         
         document.getElementById('loginOverlay').style.display = 'none';
         toast('Giriş başarılı! 🎉', true);
@@ -75,7 +97,8 @@ async function doLogin() {
         // Load initial data
         loadDashboard();
     } catch (e) {
-        toast(e.message, false);
+        console.error('[doLogin] Error:', e.message);
+        toast(e.message || 'Bağlantı hatası', false);
     } finally {
         loading(false);
     }
@@ -98,17 +121,24 @@ if (!token) {
 /* ══════════════════════════════════════════════════════════
    MAP
 ══════════════════════════════════════════════════════════ */
-const map = L.map('map', { zoomControl: true }).setView([37.455834, 30.587761], 14.5);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
-}).addTo(map);
-setTimeout(() => map.invalidateSize(), 350);
+let map = null;
 
-map.on('click', e => {
-    document.getElementById('cLat').value = e.latlng.lat.toFixed(6);
-    document.getElementById('cLng').value = e.latlng.lng.toFixed(6);
-});
+function initMap() {
+    if (map) return; // Already initialized
+    map = L.map('map', { zoomControl: true }).setView([37.455834, 30.587761], 14.5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 350);
+
+    map.on('click', e => {
+        const cLatEl = document.getElementById('cLat');
+        const cLngEl = document.getElementById('cLng');
+        if (cLatEl) cLatEl.value = e.latlng.lat.toFixed(6);
+        if (cLngEl) cLngEl.value = e.latlng.lng.toFixed(6);
+    });
+}
 
 function custIcon(initials) {
     return L.divIcon({
@@ -139,8 +169,10 @@ function setFilter(f) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('on', k === f);
     });
-    Object.values(custMarkers).forEach(m => f === 'routes' ? map.removeLayer(m) : (map.hasLayer(m) || m.addTo(map)));
-    routeLayers.forEach(l => f === 'customers' ? map.removeLayer(l) : (map.hasLayer(l) || l.addTo(map)));
+    if (map) {
+        Object.values(custMarkers).forEach(m => f === 'routes' ? map.removeLayer(m) : (map.hasLayer(m) || m.addTo(map)));
+        routeLayers.forEach(l => f === 'customers' ? map.removeLayer(l) : (map.hasLayer(l) || l.addTo(map)));
+    }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -187,14 +219,14 @@ function toggleSidebar() {
     const btn = document.getElementById('hbSidebar');
     el.classList.toggle('hidden');
     btn.classList.toggle('on', !el.classList.contains('hidden'));
-    setTimeout(() => map.invalidateSize(), 320);
+    if (map) setTimeout(() => map.invalidateSize(), 320);
 }
 function toggleRoutes() {
     const el = document.getElementById('rpanel');
     const btn = document.getElementById('hbRoutes');
     el.classList.toggle('hidden');
     btn.classList.toggle('on', !el.classList.contains('hidden'));
-    setTimeout(() => map.invalidateSize(), 320);
+    if (map) setTimeout(() => map.invalidateSize(), 320);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -294,14 +326,16 @@ async function loadCustomers() {
         _custData = await r.json();
         renderCustomerList(document.getElementById('custList'), _custData);
         // Add map markers
-        _custData.forEach(c => {
-            if (!custMarkers[c.id]) {
-                const ini = c.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-                const m = L.marker([c.lat,c.lng], {icon:custIcon(ini)}).addTo(map);
-                m.bindPopup(popupHtml(c.name, c.address, [['Bekleyen',c.pending_orders+' sipariş']], c.lat, c.lng));
-                custMarkers[c.id] = m;
-            }
-        });
+        if (map) {
+            _custData.forEach(c => {
+                if (!custMarkers[c.id]) {
+                    const ini = c.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+                    const m = L.marker([c.lat,c.lng], {icon:custIcon(ini)}).addTo(map);
+                    m.bindPopup(popupHtml(c.name, c.address, [['Bekleyen',c.pending_orders+' sipariş']], c.lat, c.lng));
+                    custMarkers[c.id] = m;
+                }
+            });
+        }
     } catch(e) { console.error(e); }
 }
 
@@ -453,11 +487,13 @@ function renderAddSheet(body) {
         <button class="btn btn-p btn-full" onclick="saveMobileVeh()">Aracı Kaydet</button>
     `;
     // Sync map click to mobile form
-    map.on('click', e => {
-        const bl = document.getElementById('bcLat');
-        const bn = document.getElementById('bcLng');
-        if (bl) { bl.value = e.latlng.lat.toFixed(6); bn.value = e.latlng.lng.toFixed(6); }
-    });
+    if (map) {
+        map.on('click', e => {
+            const bl = document.getElementById('bcLat');
+            const bn = document.getElementById('bcLng');
+            if (bl) { bl.value = e.latlng.lat.toFixed(6); bn.value = e.latlng.lng.toFixed(6); }
+        });
+    }
 }
 
 async function saveMobileCust() {
@@ -579,32 +615,34 @@ function renderRoutes(data) {
         if (coords.length < 2) return;
         allCoords.push(...coords);
 
-        let pCoords = coords;
-        if (route.route_geometry) {
-            try {
-                const g = JSON.parse(route.route_geometry);
-                const m = (g.coordinates||[]).map(c=>[c[1],c[0]]);
-                if (m.length >= 2) pCoords = m;
-            } catch(_) {}
-        }
-        const poly = L.polyline(pCoords, {color, weight:4, opacity:.85}).addTo(map);
-        routeLayers.push(poly);
+        if (map) {
+            let pCoords = coords;
+            if (route.route_geometry) {
+                try {
+                    const g = JSON.parse(route.route_geometry);
+                    const m = (g.coordinates||[]).map(c=>[c[1],c[0]]);
+                    if (m.length >= 2) pCoords = m;
+                } catch(_) {}
+            }
+            const poly = L.polyline(pCoords, {color, weight:4, opacity:.85}).addTo(map);
+            routeLayers.push(poly);
 
-        sorted.forEach((stop,i) => {
-            const mk = L.marker(coords[i], {icon:stopIcon(i+1,color)}).addTo(map);
-            mk.bindPopup(popupHtml(`Durak ${i+1}`, route.name||`Rota ${idx+1}`,
-                [['Dolu Damacana',(stop.bottle_count||0)+' adet'],['Boş İade',(stop.empty_returns_expected||0)+' adet'],['Ağırlık',(stop.weight_kg||0).toFixed(1)+' kg']],
-                coords[i][0], coords[i][1]
-            ));
-            routeLayers.push(mk);
-        });
+            sorted.forEach((stop,i) => {
+                const mk = L.marker(coords[i], {icon:stopIcon(i+1,color)}).addTo(map);
+                mk.bindPopup(popupHtml(`Durak ${i+1}`, route.name||`Rota ${idx+1}`,
+                    [['Dolu Damacana',(stop.bottle_count||0)+' adet'],['Boş İade',(stop.empty_returns_expected||0)+' adet'],['Ağırlık',(stop.weight_kg||0).toFixed(1)+' kg']],
+                    coords[i][0], coords[i][1]
+                ));
+                routeLayers.push(mk);
+            });
+        }
     });
 
-    if (allCoords.length) map.fitBounds(L.latLngBounds(allCoords),{padding:[40,40]});
+    if (allCoords.length && map) map.fitBounds(L.latLngBounds(allCoords),{padding:[40,40]});
 
     // If routes panel is hidden, show it
     const rp = document.getElementById('rpanel');
-    if (rp.classList.contains('hidden')) toggleRoutes();
+    if (rp && rp.classList.contains('hidden')) toggleRoutes();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -909,10 +947,27 @@ window.addEventListener('appinstalled', () => {
 /* ══════════════════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════════════════ */
-setTimeout(() => map.invalidateSize(), 350);
-loadDashboard();
 
-// Check if started in driver mode (PWA shortcut)
-if (location.hash === '#driver') {
-    setTimeout(enterDriverMode, 800);
+if (document.readyState === 'loading') {
+    // DOM hala yükleniyor, event'i dinle
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();
+        setTimeout(() => map.invalidateSize(), 350);
+        loadDashboard();
+        
+        // Check if started in driver mode (PWA shortcut)
+        if (location.hash === '#driver') {
+            setTimeout(enterDriverMode, 800);
+        }
+    });
+} else {
+    // DOM zaten yüklendi
+    initMap();
+    setTimeout(() => map.invalidateSize(), 350);
+    loadDashboard();
+    
+    // Check if started in driver mode (PWA shortcut)
+    if (location.hash === '#driver') {
+        setTimeout(enterDriverMode, 800);
+    }
 }
